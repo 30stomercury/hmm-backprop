@@ -18,6 +18,5 @@ class HMMForward(Function):
         potential, chart, partition, mask = ctx.saved_variables
         d_potential = hmm_forward_cpp.backward(
             grad_z, *ctx.saved_variables)
-        print(d_potential[0].sum(-1))
         return -d_potential, None, None 
 
