@@ -2,21 +2,29 @@ from torch.autograd import Function
 import torch
 import hmm_forward_cpp
 
-torch.manual_seed(42)
-
 
 class HMMForward(Function):
     @staticmethod
-    def forward(ctx, potential, length, mask):
+    def forward(ctx, potential, lengths, mask_pad):
+        """
+        potential : (B, T, N, N)
+            The potential for computing messages.
+        lengths : (B, N)
+            The lengths in a batch.
+        mask_pad : (B, T, 1, 1)
+            The unpadded are masked with 0 while the paddings are 
+            masked with log zeros, e.g. -1e-23.
+        """
+        # mask the potential
+        potential = potential * mask_pad.exp()
         chart, partition = hmm_forward_cpp.forward(potential)
-        partition = torch.gather(partition, 1, length.view(-1, 1) - 1)
-        ctx.save_for_backward(potential, chart, partition, mask)
+        partition = torch.gather(partition, 1, lengths.view(-1, 1) - 1)
+        ctx.save_for_backward(potential, chart, partition, mask_pad)
         return partition
 
     @staticmethod
     def backward(ctx, grad_z):
-        potential, chart, partition, mask = ctx.saved_variables
+        potential, chart, partition, mask_pad = ctx.saved_tensors
         d_potential = hmm_forward_cpp.backward(
-            grad_z, *ctx.saved_variables)
+            grad_z, *ctx.saved_tensors)
         return -d_potential, None, None 
-
