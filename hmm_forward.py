@@ -13,7 +13,7 @@ class HMMForward(Function):
             The lengths in a batch.
         mask_pad : (B, T, 1, 1)
             The unpadded are masked with 0 while the paddings are 
-            masked with log zeros, e.g. -1e-23.
+            masked with log zeros, e.g. [0, 0, 0, -1e23, -1e23].
         """
         # mask the potential
         potential = potential * mask_pad.exp()
