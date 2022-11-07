@@ -1,4 +1,4 @@
-## A custom HMM layer that supports backpropagation
+## A custom differentiable HMM layer for end-to-end neural HMMs
 
 Explicit implementation of the backward pass is technically not required due to 
 [Eisner's paper](https://aclanthology.org/W16-5901.pdf) (also see [Torch-Struct](https://github.com/harvardnlp/pytorch-struct)).
@@ -38,4 +38,15 @@ potential = emission + transition
 mask_pad = mask_pad.view(batch, time, 1, 1)
 partition = HMMForward.apply(potential, lengths, mask_pad)
 loss = - partition.sum()
+```
+
+### Citation
+```
+@article{yeh2022learning,
+  title={Learning Dependencies of Discrete Speech Representations with Neural Hidden Markov Models},
+  author={Yeh, Sung-Lin and Tang, Hao},
+  journal={arXiv preprint arXiv:2210.16659},
+  year={2022}
+}
+
 ```
