@@ -14,7 +14,7 @@ python setup.py install
 
 ### How to use
 The Pytorch interface is defined in `hmm_forward.py`.
-```
+```python
 import torch
 from hmm_forward import HMMForward
 
@@ -23,12 +23,18 @@ batch = 2
 time = 5
 num_states = 10
 lengths = torch.tensor([3, 5], device=device, dtype=torch.int64)
-mask_pad = torch.tensor([[0, 0, 0, 1, 1], [0, 0, 0, 0, 0]], device=device) * -1e23
+mask_pad = torch.tensor(
+        [[0, 0, 0, 1, 1], 
+         [0, 0, 0, 0, 0]], device=device) * -1e23
+
+# prepare potential (can be replaced with neural nets)
+emission = -1 * torch.randn(batch, time, num_states, num_states, 
+    device=device, requires_grad=True).pow(2)
+transition = torch.randn(batch, time, num_states, num_states, 
+    device=device).log_softmax(-1)
+potential = emission + transition
 
 # forward
-emission = -1 * torch.randn(batch, time, num_states, num_states, device=device, requires_grad=True).pow(2)
-transition = torch.randn(batch, time, num_states, num_states, device=device).log_softmax(-1)
-potential = emission + transition
 mask_pad = mask_pad.view(batch, time, 1, 1)
 partition = HMMForward.apply(potential, lengths, mask_pad)
 loss = - partition.sum()
