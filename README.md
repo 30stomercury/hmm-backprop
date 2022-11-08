@@ -60,7 +60,7 @@ running on longer sequences.
 **Backward pass:**
 | *Batch*=8, *N*=50                 | hmm-backprop  | Pytorch |
 |-----------------------------------|-------|---------|
-| *L*=100                           | 92.2 ms| 55.2 ms   |
+| *L*=100                           | 37.4 ms| 55.2 ms   |
 | *L*=500                           | 141.8 ms| 368.2 ms   |
 | *L*=1000                          | 224.2 ms| 1528.4 ms   |
 | *L*=2000                          | 397.1 ms| 6680.4 ms   |
