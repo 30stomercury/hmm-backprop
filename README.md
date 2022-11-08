@@ -24,8 +24,8 @@ time = 5
 num_states = 10
 lengths = torch.tensor([3, 5], device=device, dtype=torch.int64)
 mask_pad = torch.tensor(
-        [[0, 0, 0, 1, 1], 
-         [0, 0, 0, 0, 0]], device=device) * -1e23
+        [[1, 1, 1, 0, 0], 
+         [1, 1, 1, 1, 1]], device=device)
 
 # prepare potential (can be replaced with neural nets)
 emission = -1 * torch.randn(batch, time, num_states, num_states, 
