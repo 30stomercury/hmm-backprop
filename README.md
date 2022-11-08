@@ -1,4 +1,4 @@
-## A custom differentiable HMM layer for end-to-end neural HMMs
+## A custom differentiable HMM layer 
 
 Explicit implementation of the backward pass is technically not required due to 
 [Eisner's paper](https://aclanthology.org/W16-5901.pdf) (also see [Torch-Struct](https://github.com/harvardnlp/pytorch-struct)).
@@ -39,6 +39,9 @@ mask_pad = mask_pad.view(batch, time, 1, 1)
 log_partition = HMMForward.apply(potential, lengths, mask_pad)
 loss = - log_partition.sum()
 ```
+
+### More examples
+More examples will be added.
 
 ### Citation
 ```
