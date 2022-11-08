@@ -49,9 +49,9 @@ std::vector<torch::Tensor> hmm_fw_forward(const torch::Tensor& potential) {
             ).clamp(logzero, 0);
     }
     // (B, T)
-    auto partition = torch::logsumexp(chart, /*dim=*/{-1});
+    auto log_partition = torch::logsumexp(chart, /*dim=*/{-1});
 
-    return {chart, partition};
+    return {chart, log_partition};
 }
 
 
@@ -90,7 +90,7 @@ torch::Tensor hmm_fw_backward(
         const torch::Tensor& grad_z, 
         const torch::Tensor& potential, 
         const torch::Tensor& fwd_vars,
-        const torch::Tensor& partition,
+        const torch::Tensor& log_partition,
         const torch::Tensor& mask) {
     const int batch = potential.sizes()[0];
     const int time = potential.sizes()[1];
@@ -118,7 +118,7 @@ torch::Tensor hmm_fw_backward(
     }
     torch::Tensor grad = 
         chart.clamp(logzero, 0)
-        - partition.view({batch, 1, 1, 1})
+        - log_partition.view({batch, 1, 1, 1})
         + (-grad_z).log().view({batch, 1, 1, 1})
         + mask;
 

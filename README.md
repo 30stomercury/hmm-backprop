@@ -36,8 +36,8 @@ potential = emission + transition
 
 # forward
 mask_pad = mask_pad.view(batch, time, 1, 1)
-partition = HMMForward.apply(potential, lengths, mask_pad)
-loss = - partition.sum()
+log_partition = HMMForward.apply(potential, lengths, mask_pad)
+loss = - log_partition.sum()
 ```
 
 ### Citation

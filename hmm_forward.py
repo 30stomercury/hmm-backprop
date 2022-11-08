@@ -17,14 +17,14 @@ class HMMForward(Function):
         """
         # mask the potential
         potential = potential * mask_pad.exp()
-        chart, partition = hmm_forward_cpp.forward(potential)
-        partition = torch.gather(partition, 1, lengths.view(-1, 1) - 1)
-        ctx.save_for_backward(potential, chart, partition, mask_pad)
-        return partition
+        chart, log_partition = hmm_forward_cpp.forward(potential)
+        log_partition = torch.gather(log_partition, 1, lengths.view(-1, 1) - 1)
+        ctx.save_for_backward(potential, chart, log_partition, mask_pad)
+        return log_partition
 
     @staticmethod
     def backward(ctx, grad_z):
-        potential, chart, partition, mask_pad = ctx.saved_tensors
+        potential, chart, log_partition, mask_pad = ctx.saved_tensors
         d_potential = hmm_forward_cpp.backward(
             grad_z, *ctx.saved_tensors)
         return -d_potential, None, None 
