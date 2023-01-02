@@ -4,7 +4,7 @@ Explicit implementation of the backward pass is technically not necessarry due t
 [Eisner's paper](https://aclanthology.org/W16-5901.pdf) (also see [Torch-Struct](https://github.com/harvardnlp/pytorch-struct)).
 However, running dynamic programming in Pytorch is computationally expensive for long sequences such as speech.
 
-This repo provides a C++ extension of the HMM layer that avoids Python for-loop.
+This repo provides a C++ extension of the HMM layer, gradients are computed with **batched** forward-backward.
 
 ### How to install
 To build C++ extension, run:
