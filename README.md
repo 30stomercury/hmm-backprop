@@ -1,4 +1,4 @@
-## A custom differentiable Hidden Markov Model layer 
+## A custom differentiable HMM layer 
 
 Explicit implementation of the backward pass is technically not necessarry due to 
 [Eisner's paper](https://aclanthology.org/W16-5901.pdf) (also see [Torch-Struct](https://github.com/harvardnlp/pytorch-struct)).
