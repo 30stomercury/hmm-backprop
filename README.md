@@ -2,9 +2,9 @@
 
 Explicit implementation of the backward pass is technically not necessarry due to 
 [Eisner's paper](https://aclanthology.org/W16-5901.pdf) (also see [Torch-Struct](https://github.com/harvardnlp/pytorch-struct)).
-However, running dynamic programming in Pytorch is computationally expensive for long sequences such as speech.
+However, running dynamic programming in Pytorch is computationally expensive especially for long sequences such as speech.
 
-This repo provides a C++ extension of the HMM layer, gradients are computed with **batched** message passing algorithm (also known as forward-backward).
+This repo provides a C++ kernel of the HMM layer, gradients are computed with **batched** message passing algorithm (also known as forward-backward).
 
 ### How to install
 To build C++ extension, run:
