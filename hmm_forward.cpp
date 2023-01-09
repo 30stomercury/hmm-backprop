@@ -119,6 +119,7 @@ torch::Tensor hmm_fw_backward(
         chart.clamp_(logzero, 0)
         - log_partition.view({batch, 1, 1, 1})
         + (-grad_z).log().view({batch, 1, 1, 1});
+    grad.masked_fill_(mask==0, logzero);
 
     return grad.exp();
 }
