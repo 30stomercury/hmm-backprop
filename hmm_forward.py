@@ -15,10 +15,8 @@ class HMMForward(Function):
             The padded are masked with 0 while the paddings are 
             masked with 1, e.g. [1, 1, 1, 0, 0].
         """
-        # convert the mask into log scale
-        mask = (1 - mask) * -1e23
         # for the backward algorithm
-        potential = potential + (-1 * mask)
+        potential.masked_fill_(mask==0, 1e23)
         chart, log_partition = hmm_forward_cpp.forward(potential)
         log_partition = torch.gather(log_partition, 1, lengths.view(-1, 1) - 1)
         ctx.save_for_backward(potential, chart, log_partition, mask)

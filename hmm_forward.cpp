@@ -2,6 +2,8 @@
 #include <vector>
 using namespace torch::indexing;
 
+double logzero = -1e23;
+
 
 /* Sum operation in Log Semiring
  * Matrix multiplication in log space.
@@ -37,7 +39,6 @@ std::vector<torch::Tensor> hmm_fw_forward(const torch::Tensor& potential) {
     const int time = potential.sizes()[1];
     const int N = potential.sizes()[2];
     auto chart = torch::zeros({batch, time, N}, potential.device());
-    double logzero = -1e23;
 
     chart.index_put_({Slice(), 0}, potential.index({Slice(), 0, 0}));
     auto potential_ = potential.transpose(-2, -1);
@@ -46,7 +47,7 @@ std::vector<torch::Tensor> hmm_fw_forward(const torch::Tensor& potential) {
             log_matmul(
                 chart.index({Slice(), i-1}), 
                 potential_.index({Slice(), i})
-            ).clamp(logzero, 0);
+            );
     }
     // (B, T)
     auto log_partition = torch::logsumexp(chart, /*dim=*/{-1});
@@ -71,14 +72,13 @@ torch::Tensor hmm_bw_forward(const torch::Tensor& potential) {
     const int N = potential.sizes()[2];
     // Init chart with zeros
     auto chart = torch::zeros({batch, time, N}, potential.device());
-    double logzero = - std::numeric_limits<double>::infinity();
 
     int64_t start = time - 2;
     for (int64_t i = start; i > -1; --i) {
         chart.index({Slice(), i}) = 
             log_matmul(chart.index({Slice(), i+1}), 
                        potential.index({Slice(), i+1})
-        ).clamp(logzero, 0);
+        ).clamp_(logzero, 0);
     }
 
     return chart;
@@ -96,7 +96,6 @@ torch::Tensor hmm_fw_backward(
     const int time = potential.sizes()[1];
     const int N = potential.sizes()[2];
     torch::Tensor chart = torch::zeros({batch, time, N, N}, potential.device());
-    double logzero = -1e23;
     // fwd and bwd vars
     torch::Tensor bwd_vars = hmm_bw_forward(potential);
     torch::Tensor bwd_vars_ = bwd_vars.unsqueeze(-2);
@@ -117,10 +116,9 @@ torch::Tensor hmm_fw_backward(
         );
     }
     torch::Tensor grad = 
-        chart.clamp(logzero, 0)
+        chart.clamp_(logzero, 0)
         - log_partition.view({batch, 1, 1, 1})
-        + (-grad_z).log().view({batch, 1, 1, 1})
-        + mask;
+        + (-grad_z).log().view({batch, 1, 1, 1});
 
     return grad.exp();
 }
