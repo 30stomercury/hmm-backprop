@@ -23,6 +23,12 @@ torch::Tensor log_matmul(
     return torch::logsumexp(unsqueezed + b, /*dim=*/{-1}, false);
 }
 
+tuple<torch::Tensor, torch::tensor> max_matmul(
+    torch::Tensor a, const torch::Tensor& b) {
+    auto unsqueezed = a.unsqueeze(-2);
+    return torch::max(unsqueezed + b, /*dim=*/{-1}, false);
+}
+
 
 /* Forward algorithm in log space (forward).
 
@@ -124,6 +130,43 @@ torch::Tensor hmm_fw_backward(
     // mask paddings
     chart.masked_fill_(mask==0, logzero).exp_();
     return chart;
+}
+
+
+torch::Tensor viterbi(
+        const torch::Tensor potential, 
+        const torch::Tensor lengths) {
+    const int batch = potential.sizes()[0];
+    const int time = potential.sizes()[1];
+    const int N = potential.sizes()[2];
+    torch::Tensor chart = torch::zeros(batch, time, N, potential.device())
+    torch::Tensor backptr = torch::zeros(batch, time, N, potential.device())
+
+    chart.index({Slice(), 0}) = potential.index({Slice, 0, 0});
+    auto potential_ = potential.transpose(-2, -1);
+    tuple<torch::Tensor> max_results;
+    for (int i = 1; i < time - 1; ++i) {
+        max_results = max_matmul(
+            chart.index({Slice(), i - 1}), 
+            potential.index({Slice(), i})
+        );
+        chart.index({Slice(), i - 1}) = get<1>(max_results);
+        backptr.index({Slice(), i - 1}) = get<2>(max_results);
+    }
+    max_results = torch::max(chart, -1);
+    auto log_partition = get<0>(max_results);
+    auto max_index = get<1>(max_results);
+
+    auto decoded_seq = torch::Tensor(batch, time, potential.device());
+    for (int i = 0; i < batch; ++i) {
+        prev_state = max_index.index({i, lengths.index({i})});
+        decoded_seq.index({i, time - 1}) = prev_state;
+        for (int j = time - 2; j > -1; --j) {
+            prev_state = backptr.index({i, j, prev_state});
+            decoded_seq.index({i, j}) = prev_state;
+        }
+    }
+    return decoded_seq;
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
