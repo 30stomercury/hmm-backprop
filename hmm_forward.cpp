@@ -5,22 +5,38 @@ using namespace torch::indexing;
 double logzero = -1e23;
 
 
+// CUDA declarations
 /* Sum operation in Log Semiring
  * Matrix multiplication in log space.
 
 Arguments
 ---------
-log_a: (B, N) 
-log_b: (B, N, N)
+log_a: (B, m, p) 
+log_b: (B, p, n)
 
 Returns
 -------
-(B, N)
+(B, m, n)
 */
+torch::Tensor log_matmul_cuda(
+    torch::Tensor& a, 
+    torch::Tensor& b
+);
+
+// NOTE: AT_ASSERT has become AT_CHECK on master after 0.4.
+#define CHECK_CUDA(x) AT_ASSERT(x.is_cuda(), #x " must be a CUDA tensor")
+#define CHECK_CONTIGUOUS(x) AT_ASSERT(x.is_contiguous(), #x " must be contiguous")
+#define CHECK_INPUT(x) CHECK_CUDA(x)
+
+// C++ interface
 torch::Tensor log_matmul(
-    torch::Tensor a, const torch::Tensor& b) {
-    auto unsqueezed = a.unsqueeze(-2);
-    return torch::logsumexp(unsqueezed + b, /*dim=*/{-1}, false);
+        torch::Tensor a, 
+        torch::Tensor b) {
+    //a = a.contiguous();
+    //b = b.contiguous();
+    CHECK_INPUT(a);
+    CHECK_INPUT(b);
+    return log_matmul_cuda(a, b);
 }
 
 
@@ -38,18 +54,18 @@ std::vector<torch::Tensor> hmm_fw_forward(const torch::Tensor& potential) {
     const int batch = potential.sizes()[0];
     const int time = potential.sizes()[1];
     const int N = potential.sizes()[2];
-    auto chart = torch::zeros({batch, time, N}, potential.device());
+    auto chart = torch::zeros({batch, time, 1, N}, potential.device());
 
-    chart.index_put_({Slice(), 0}, potential.index({Slice(), 0, 0}));
-    auto potential_ = potential.transpose(-2, -1);
+    chart.index_put_({Slice(), 0, 0}, potential.index({Slice(), 0, 0}));
     for (int64_t i = 1; i < time; ++i) {
         chart.index({Slice(), i}) = 
             log_matmul(
-                chart.index({Slice(), i-1}), 
-                potential_.index({Slice(), i})
+                chart.index({Slice(), i-1}),   // (B, 1, N)
+                potential.index({Slice(), i})  // (B, N, N)
             );
     }
     // (B, T)
+    chart = chart.view({batch, time, N});
     auto log_partition = torch::logsumexp(chart, /*dim=*/{-1});
 
     return {chart, log_partition};
@@ -71,16 +87,17 @@ torch::Tensor hmm_bw_forward(const torch::Tensor& potential) {
     const int time = potential.sizes()[1];
     const int N = potential.sizes()[2];
     // Init chart with zeros
-    auto chart = torch::zeros({batch, time, N}, potential.device());
+    auto chart = torch::zeros({batch, time, N, 1}, potential.device());
 
     int64_t start = time - 2;
     for (int64_t i = start; i > -1; --i) {
         chart.index({Slice(), i}) = 
-            log_matmul(chart.index({Slice(), i+1}), 
-                       potential.index({Slice(), i+1})
+            log_matmul(potential.index({Slice(), i+1}), // (B, N, N)
+                       chart.index({Slice(), i+1})      // (B, N, 1)
         ).clamp_(logzero, 0);
     }
-
+    
+    chart = chart.view({batch, time, N});
     return chart;
 }
 
@@ -118,8 +135,8 @@ torch::Tensor hmm_fw_backward(
 
     chart.clamp_(logzero, 0);
     chart = chart
-        - log_partition.view({batch, 1, 1, 1, 1})
-        + (-grad_z).log().view({batch, 1, 1, 1, 1});
+        - log_partition.view({batch, 1, 1, 1})
+        + (-grad_z).log().view({batch, 1, 1, 1});
 
     // mask paddings
     chart.masked_fill_(mask==0, logzero).exp_();
