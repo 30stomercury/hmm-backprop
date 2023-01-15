@@ -32,8 +32,6 @@ torch::Tensor log_matmul_cuda(
 torch::Tensor log_matmul(
         torch::Tensor a, 
         torch::Tensor b) {
-    //a = a.contiguous();
-    //b = b.contiguous();
     CHECK_INPUT(a);
     CHECK_INPUT(b);
     return log_matmul_cuda(a, b);
