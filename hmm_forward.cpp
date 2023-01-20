@@ -113,8 +113,8 @@ torch::Tensor hmm_fw_backward(
     torch::Tensor chart = torch::zeros({batch, time, N, N}, potential.device());
     // fwd and bwd vars
     torch::Tensor bwd_vars = hmm_bw_forward(potential);
-    torch::Tensor bwd_vars_ = bwd_vars.unsqueeze(-2);
-    torch::Tensor fwd_vars_ = fwd_vars.unsqueeze(-1);
+    torch::Tensor bwd_vars_ = bwd_vars.view({batch, time, 1, N});
+    torch::Tensor fwd_vars_ = fwd_vars.view({batch, time, N, 1});
     
     int64_t end = time - 1;
     chart.index_put_({Slice(), 0}, logzero);
@@ -122,15 +122,10 @@ torch::Tensor hmm_fw_backward(
         fwd_vars.index({Slice(), 0}) + 
         bwd_vars.index({Slice(), 0})
     );
-    for (int64_t i = 0; i < end; ++i) {
-        chart.index_put_(
-            {Slice(), i+1},
-            fwd_vars_.index({Slice(), i}) + 
-            potential.index({Slice(), i+1}) +
-            bwd_vars_.index({Slice(), i+1})
-        );
-    }
-
+    chart.index({Slice(), Slice(1, time)}) = 
+         fwd_vars_.index({Slice(), Slice(0, time-1)})
+         + potential.index({Slice(), Slice(1, time)})
+         + bwd_vars_.index({Slice(), Slice(1, time)});
     chart.clamp_(logzero, 0);
     chart = chart
         - log_partition.view({batch, 1, 1, 1})
